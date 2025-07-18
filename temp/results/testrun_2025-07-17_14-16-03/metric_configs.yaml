@@ -1,0 +1,1133 @@
+- name: mse
+  namespace: metrics
+  version: dev
+  argument_groups:
+  - name: Arguments
+    arguments:
+    - type: file
+      name: --input_test
+      label: Test data
+      summary: The subset of molecules used for the test dataset
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: counts
+            description: Raw counts
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - name: dataset_name
+            type: string
+            description: Nicely formatted name.
+            required: true
+          - type: string
+            name: dataset_url
+            description: Link to the original source of the dataset.
+            required: false
+          - name: dataset_reference
+            type: string
+            description: Bibtex reference of the paper in which the dataset was published.
+            required: false
+          - name: dataset_summary
+            type: string
+            description: Short description of the dataset.
+            required: true
+          - name: dataset_description
+            type: string
+            description: Long description of the dataset.
+            required: true
+          - name: dataset_organism
+            type: string
+            description: The organism of the sample in the dataset.
+            required: false
+          - name: train_sum
+            type: integer
+            description: The total number of counts in the training dataset.
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/test.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_test
+    - type: file
+      name: --input_prediction
+      label: Denoised data
+      summary: A denoised dataset as output by a method.
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: denoised
+            description: denoised data
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/denoised.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_prediction
+    - type: file
+      name: --output
+      label: Score
+      summary: File indicating the score of a metric.
+      info:
+        format:
+          type: h5ad
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+          - type: string
+            name: metric_ids
+            description: One or more unique metric identifiers
+            multiple: true
+            required: true
+          - type: double
+            name: metric_values
+            description: The metric values obtained for the given prediction. Must
+              be of same length as 'metric_ids'.
+            multiple: true
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/score.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: output
+      multiple: false
+      multiple_sep: ;
+      plainName: output
+      default: &id001 !!org.codehaus.groovy.runtime.GStringImpl {
+        }
+  resources:
+  - type: python_script
+    path: script.py
+    is_executable: true
+  test_resources:
+  - type: python_script
+    path: /common/component_tests/check_config.py
+    is_executable: true
+  - type: python_script
+    path: /common/component_tests/run_and_check_output.py
+    is_executable: true
+  - type: file
+    path: /common/library.bib
+  - type: file
+    path: /resources_test/task_denoising/cxg_immune_cell_atlas
+    dest: resources_test/task_denoising/cxg_immune_cell_atlas
+  info:
+    metrics:
+    - name: mse
+      label: Mean-squared error
+      summary: The mean squared error between the denoised counts and the true counts.
+      description: The mean squared error between the denoised counts of the training
+        dataset and the true counts of the test dataset after reweighing by the train/test
+        ratio
+      references:
+        doi: 10.1101/786269
+      v1:
+        path: openproblems/tasks/denoising/metrics/mse.py
+        commit: b3456fd73c04c28516f6df34c57e6e3e8b0dab32
+      maximize: false
+      min: 0
+      max: '+.inf'
+    type: metric
+    type_info:
+      label: Metric
+      summary: A metric.
+      description: |
+        A metric for evaluating denoised datasets.
+  status: enabled
+  repositories:
+  - type: github
+    name: core
+    repo: openproblems-bio/core
+    tag: build/main
+    path: viash/core
+  license: MIT
+  links:
+    repository: https://github.com/openproblems-bio/task_denoising
+    docker_registry: ghcr.io
+  runners:
+  - type: executable
+    id: executable
+    docker_setup_strategy: ifneedbepullelsecachedbuild
+  - type: nextflow
+    id: nextflow
+    directives:
+      label:
+      - midtime
+      - highmem
+      - midcpu
+      tag: $id
+    auto:
+      simplifyInput: true
+      simplifyOutput: false
+      transcript: false
+      publish: false
+    config:
+      labels:
+        lowmem: memory = 20.Gb
+        midmem: memory = 50.Gb
+        highmem: memory = 100.Gb
+        lowcpu: cpus = 5
+        midcpu: cpus = 15
+        highcpu: cpus = 30
+        lowtime: time = 1.h
+        midtime: time = 4.h
+        hightime: time = 8.h
+        veryhightime: time = 24.h
+    debug: false
+    container: docker
+  engines:
+  - type: docker
+    id: docker
+    image: openproblems/base_python:1
+    namespace_separator: /
+    setup:
+    - type: python
+      user: false
+      pypi:
+      - scikit-learn
+      - scprep
+      - numpy<2
+      upgrade: true
+  build_info:
+    config: /Users/mlange/Projects/task_denoising/src/metrics/mse/config.vsh.yaml
+    runner: nextflow
+    engine: docker
+    output: target/nextflow/metrics/mse
+    viash_version: 0.9.0
+    git_commit: 01e02de1cbdd0eafa291914c8839a79df143c78f
+    git_remote: https://github.com/quadbio/task_denoising.git
+  package_config:
+    name: task_denoising
+    version: dev
+    label: Denoising
+    summary: Removing noise in sparse single-cell RNA-sequencing count data
+    description: |
+      A key challenge in evaluating denoising methods is the general lack of a ground truth. A
+      recent benchmark study ([Hou et al.,
+      2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-02132-x))
+      relied on flow-sorted datasets, mixture control experiments ([Tian et al.,
+      2019](https://www.nature.com/articles/s41592-019-0425-8)), and comparisons with bulk
+      RNA-Seq data. Since each of these approaches suffers from specific limitations, it is
+      difficult to combine these different approaches into a single quantitative measure of
+      denoising accuracy. Here, we instead rely on an approach termed molecular
+      cross-validation (MCV), which was specifically developed to quantify denoising accuracy
+      in the absence of a ground truth ([Batson et al.,
+      2019](https://www.biorxiv.org/content/10.1101/786269v1)). In MCV, the observed molecules
+      in a given scRNA-Seq dataset are first partitioned between a *training* and a *test*
+      dataset. Next, a denoising method is applied to the training dataset. Finally, denoising
+      accuracy is measured by comparing the result to the test dataset. The authors show that
+      both in theory and in practice, the measured denoising accuracy is representative of the
+      accuracy that would be obtained on a ground truth dataset.
+    info:
+      image: thumbnail.svg
+      motivation: |
+        Single-cell RNA-Seq protocols only detect a fraction of the mRNA molecules present
+        in each cell. As a result, the measurements (UMI counts) observed for each gene and each
+        cell are associated with generally high levels of technical noise ([Grün et al.,
+        2014](https://www.nature.com/articles/nmeth.2930)). Denoising describes the task of
+        estimating the true expression level of each gene in each cell. In the single-cell
+        literature, this task is also referred to as *imputation*, a term which is typically
+        used for missing data problems in statistics. Similar to the use of the terms "dropout",
+        "missing data", and "technical zeros", this terminology can create confusion about the
+        underlying measurement process ([Sarkar and Stephens,
+        2020](https://www.biorxiv.org/content/10.1101/2020.04.07.030007v2)).
+      test_resources:
+      - type: s3
+        path: s3://openproblems-data/resources_test/task_denoising/
+        dest: resources_test/task_denoising
+      - type: s3
+        path: s3://openproblems-data/resources_test/common/
+        dest: resources_test/common
+    repositories:
+    - type: github
+      name: core
+      repo: openproblems-bio/core
+      tag: build/main
+      path: viash/core
+    viash_version: 0.9.0
+    source: src
+    target: target
+    config_mods:
+    - '.runners[.type == "nextflow"].config.labels := { lowmem : "memory = 20.Gb",
+      midmem : "memory = 50.Gb", highmem : "memory = 100.Gb", lowcpu : "cpus = 5",
+      midcpu : "cpus = 15", highcpu : "cpus = 30", lowtime : "time = 1.h", midtime
+      : "time = 4.h", hightime : "time = 8.h", veryhightime : "time = 24.h" }'
+    authors:
+    - name: Wesley Lewis
+      roles:
+      - author
+      - maintainer
+      info:
+        github: wes-lewis
+    - name: Scott Gigante
+      roles:
+      - author
+      - maintainer
+      info:
+        github: scottgigante
+        orcid: 0000-0002-4544-2764
+    - name: Robrecht Cannoodt
+      roles:
+      - author
+      info:
+        github: rcannood
+        orcid: 0000-0003-3641-729X
+    - name: Kai Waldrant
+      roles:
+      - contributor
+      info:
+        github: KaiWaldrant
+        orcid: 0009-0003-8555-1361
+    - name: Jeremie Kalfon
+      roles:
+      - contributor
+      info:
+        github: jkobject
+        orcid: 0000-0002-2818-9728
+    keywords:
+    - single-cell
+    - openproblems
+    - benchmark
+    - denoising
+    license: MIT
+    organization: openproblems-bio
+    links:
+      repository: https://github.com/openproblems-bio/task_denoising
+      docker_registry: ghcr.io
+      issue_tracker: https://github.com/openproblems-bio/task_denoising/issues
+  arguments: [
+    ]
+  allArguments:
+  - type: file
+    name: --input_test
+    label: Test data
+    summary: The subset of molecules used for the test dataset
+    info:
+      format:
+        type: h5ad
+        layers:
+        - type: integer
+          name: counts
+          description: Raw counts
+          required: true
+        uns:
+        - type: string
+          name: dataset_id
+          description: A unique identifier for the dataset
+          required: true
+        - name: dataset_name
+          type: string
+          description: Nicely formatted name.
+          required: true
+        - type: string
+          name: dataset_url
+          description: Link to the original source of the dataset.
+          required: false
+        - name: dataset_reference
+          type: string
+          description: Bibtex reference of the paper in which the dataset was published.
+          required: false
+        - name: dataset_summary
+          type: string
+          description: Short description of the dataset.
+          required: true
+        - name: dataset_description
+          type: string
+          description: Long description of the dataset.
+          required: true
+        - name: dataset_organism
+          type: string
+          description: The organism of the sample in the dataset.
+          required: false
+        - name: train_sum
+          type: integer
+          description: The total number of counts in the training dataset.
+          required: true
+    example: resources_test/task_denoising/cxg_immune_cell_atlas/test.h5ad
+    must_exist: true
+    create_parent: true
+    required: true
+    direction: input
+    multiple: false
+    multiple_sep: ;
+    plainName: input_test
+  - type: file
+    name: --input_prediction
+    label: Denoised data
+    summary: A denoised dataset as output by a method.
+    info:
+      format:
+        type: h5ad
+        layers:
+        - type: integer
+          name: denoised
+          description: denoised data
+          required: true
+        uns:
+        - type: string
+          name: dataset_id
+          description: A unique identifier for the dataset
+          required: true
+        - type: string
+          name: method_id
+          description: A unique identifier for the method
+          required: true
+    example: resources_test/task_denoising/cxg_immune_cell_atlas/denoised.h5ad
+    must_exist: true
+    create_parent: true
+    required: true
+    direction: input
+    multiple: false
+    multiple_sep: ;
+    plainName: input_prediction
+  - type: file
+    name: --output
+    label: Score
+    summary: File indicating the score of a metric.
+    info:
+      format:
+        type: h5ad
+        uns:
+        - type: string
+          name: dataset_id
+          description: A unique identifier for the dataset
+          required: true
+        - type: string
+          name: method_id
+          description: A unique identifier for the method
+          required: true
+        - type: string
+          name: metric_ids
+          description: One or more unique metric identifiers
+          multiple: true
+          required: true
+        - type: double
+          name: metric_values
+          description: The metric values obtained for the given prediction. Must be
+            of same length as 'metric_ids'.
+          multiple: true
+          required: true
+    example: resources_test/task_denoising/cxg_immune_cell_atlas/score.h5ad
+    must_exist: true
+    create_parent: true
+    required: true
+    direction: output
+    multiple: false
+    multiple_sep: ;
+    plainName: output
+    default: *id001
+  allArgumentGroups:
+  - name: Arguments
+    arguments:
+    - type: file
+      name: --input_test
+      label: Test data
+      summary: The subset of molecules used for the test dataset
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: counts
+            description: Raw counts
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - name: dataset_name
+            type: string
+            description: Nicely formatted name.
+            required: true
+          - type: string
+            name: dataset_url
+            description: Link to the original source of the dataset.
+            required: false
+          - name: dataset_reference
+            type: string
+            description: Bibtex reference of the paper in which the dataset was published.
+            required: false
+          - name: dataset_summary
+            type: string
+            description: Short description of the dataset.
+            required: true
+          - name: dataset_description
+            type: string
+            description: Long description of the dataset.
+            required: true
+          - name: dataset_organism
+            type: string
+            description: The organism of the sample in the dataset.
+            required: false
+          - name: train_sum
+            type: integer
+            description: The total number of counts in the training dataset.
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/test.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_test
+    - type: file
+      name: --input_prediction
+      label: Denoised data
+      summary: A denoised dataset as output by a method.
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: denoised
+            description: denoised data
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/denoised.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_prediction
+    - type: file
+      name: --output
+      label: Score
+      summary: File indicating the score of a metric.
+      info:
+        format:
+          type: h5ad
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+          - type: string
+            name: metric_ids
+            description: One or more unique metric identifiers
+            multiple: true
+            required: true
+          - type: double
+            name: metric_values
+            description: The metric values obtained for the given prediction. Must
+              be of same length as 'metric_ids'.
+            multiple: true
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/score.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: output
+      multiple: false
+      multiple_sep: ;
+      plainName: output
+      default: *id001
+- name: poisson
+  namespace: metrics
+  version: dev
+  argument_groups:
+  - name: Arguments
+    arguments:
+    - type: file
+      name: --input_test
+      label: Test data
+      summary: The subset of molecules used for the test dataset
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: counts
+            description: Raw counts
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - name: dataset_name
+            type: string
+            description: Nicely formatted name.
+            required: true
+          - type: string
+            name: dataset_url
+            description: Link to the original source of the dataset.
+            required: false
+          - name: dataset_reference
+            type: string
+            description: Bibtex reference of the paper in which the dataset was published.
+            required: false
+          - name: dataset_summary
+            type: string
+            description: Short description of the dataset.
+            required: true
+          - name: dataset_description
+            type: string
+            description: Long description of the dataset.
+            required: true
+          - name: dataset_organism
+            type: string
+            description: The organism of the sample in the dataset.
+            required: false
+          - name: train_sum
+            type: integer
+            description: The total number of counts in the training dataset.
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/test.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_test
+    - type: file
+      name: --input_prediction
+      label: Denoised data
+      summary: A denoised dataset as output by a method.
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: denoised
+            description: denoised data
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/denoised.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_prediction
+    - type: file
+      name: --output
+      label: Score
+      summary: File indicating the score of a metric.
+      info:
+        format:
+          type: h5ad
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+          - type: string
+            name: metric_ids
+            description: One or more unique metric identifiers
+            multiple: true
+            required: true
+          - type: double
+            name: metric_values
+            description: The metric values obtained for the given prediction. Must
+              be of same length as 'metric_ids'.
+            multiple: true
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/score.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: output
+      multiple: false
+      multiple_sep: ;
+      plainName: output
+      default: &id002 !!org.codehaus.groovy.runtime.GStringImpl {
+        }
+  resources:
+  - type: python_script
+    path: script.py
+    is_executable: true
+  test_resources:
+  - type: python_script
+    path: /common/component_tests/check_config.py
+    is_executable: true
+  - type: python_script
+    path: /common/component_tests/run_and_check_output.py
+    is_executable: true
+  - type: file
+    path: /common/library.bib
+  - type: file
+    path: /resources_test/task_denoising/cxg_immune_cell_atlas
+    dest: resources_test/task_denoising/cxg_immune_cell_atlas
+  info:
+    metrics:
+    - name: poisson
+      label: Poisson Loss
+      summary: The Poisson log likelihood of the true counts observed in the distribution
+        of denoised counts
+      description: The Poisson log likelihood of observing the true counts of the
+        test dataset given the distribution given in the denoised dataset.
+      references:
+        doi: 10.1101/786269
+      v1:
+        path: openproblems/tasks/denoising/metrics/poisson.py
+        commit: b3456fd73c04c28516f6df34c57e6e3e8b0dab32
+      maximize: false
+      min: 0
+      max: '+.inf'
+    type: metric
+    type_info:
+      label: Metric
+      summary: A metric.
+      description: |
+        A metric for evaluating denoised datasets.
+  status: enabled
+  repositories:
+  - type: github
+    name: core
+    repo: openproblems-bio/core
+    tag: build/main
+    path: viash/core
+  license: MIT
+  links:
+    repository: https://github.com/openproblems-bio/task_denoising
+    docker_registry: ghcr.io
+  runners:
+  - type: executable
+    id: executable
+    docker_setup_strategy: ifneedbepullelsecachedbuild
+  - type: nextflow
+    id: nextflow
+    directives:
+      label:
+      - midtime
+      - highmem
+      - midcpu
+      tag: $id
+    auto:
+      simplifyInput: true
+      simplifyOutput: false
+      transcript: false
+      publish: false
+    config:
+      labels:
+        lowmem: memory = 20.Gb
+        midmem: memory = 50.Gb
+        highmem: memory = 100.Gb
+        lowcpu: cpus = 5
+        midcpu: cpus = 15
+        highcpu: cpus = 30
+        lowtime: time = 1.h
+        midtime: time = 4.h
+        hightime: time = 8.h
+        veryhightime: time = 24.h
+    debug: false
+    container: docker
+  engines:
+  - type: docker
+    id: docker
+    image: openproblems/base_python:1
+    namespace_separator: /
+    setup:
+    - type: python
+      user: false
+      pypi:
+      - scprep
+      - numpy<2
+      upgrade: true
+  build_info:
+    config: /Users/mlange/Projects/task_denoising/src/metrics/poisson/config.vsh.yaml
+    runner: nextflow
+    engine: docker
+    output: target/nextflow/metrics/poisson
+    viash_version: 0.9.0
+    git_commit: 01e02de1cbdd0eafa291914c8839a79df143c78f
+    git_remote: https://github.com/quadbio/task_denoising.git
+  package_config:
+    name: task_denoising
+    version: dev
+    label: Denoising
+    summary: Removing noise in sparse single-cell RNA-sequencing count data
+    description: |
+      A key challenge in evaluating denoising methods is the general lack of a ground truth. A
+      recent benchmark study ([Hou et al.,
+      2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-02132-x))
+      relied on flow-sorted datasets, mixture control experiments ([Tian et al.,
+      2019](https://www.nature.com/articles/s41592-019-0425-8)), and comparisons with bulk
+      RNA-Seq data. Since each of these approaches suffers from specific limitations, it is
+      difficult to combine these different approaches into a single quantitative measure of
+      denoising accuracy. Here, we instead rely on an approach termed molecular
+      cross-validation (MCV), which was specifically developed to quantify denoising accuracy
+      in the absence of a ground truth ([Batson et al.,
+      2019](https://www.biorxiv.org/content/10.1101/786269v1)). In MCV, the observed molecules
+      in a given scRNA-Seq dataset are first partitioned between a *training* and a *test*
+      dataset. Next, a denoising method is applied to the training dataset. Finally, denoising
+      accuracy is measured by comparing the result to the test dataset. The authors show that
+      both in theory and in practice, the measured denoising accuracy is representative of the
+      accuracy that would be obtained on a ground truth dataset.
+    info:
+      image: thumbnail.svg
+      motivation: |
+        Single-cell RNA-Seq protocols only detect a fraction of the mRNA molecules present
+        in each cell. As a result, the measurements (UMI counts) observed for each gene and each
+        cell are associated with generally high levels of technical noise ([Grün et al.,
+        2014](https://www.nature.com/articles/nmeth.2930)). Denoising describes the task of
+        estimating the true expression level of each gene in each cell. In the single-cell
+        literature, this task is also referred to as *imputation*, a term which is typically
+        used for missing data problems in statistics. Similar to the use of the terms "dropout",
+        "missing data", and "technical zeros", this terminology can create confusion about the
+        underlying measurement process ([Sarkar and Stephens,
+        2020](https://www.biorxiv.org/content/10.1101/2020.04.07.030007v2)).
+      test_resources:
+      - type: s3
+        path: s3://openproblems-data/resources_test/task_denoising/
+        dest: resources_test/task_denoising
+      - type: s3
+        path: s3://openproblems-data/resources_test/common/
+        dest: resources_test/common
+    repositories:
+    - type: github
+      name: core
+      repo: openproblems-bio/core
+      tag: build/main
+      path: viash/core
+    viash_version: 0.9.0
+    source: src
+    target: target
+    config_mods:
+    - '.runners[.type == "nextflow"].config.labels := { lowmem : "memory = 20.Gb",
+      midmem : "memory = 50.Gb", highmem : "memory = 100.Gb", lowcpu : "cpus = 5",
+      midcpu : "cpus = 15", highcpu : "cpus = 30", lowtime : "time = 1.h", midtime
+      : "time = 4.h", hightime : "time = 8.h", veryhightime : "time = 24.h" }'
+    authors:
+    - name: Wesley Lewis
+      roles:
+      - author
+      - maintainer
+      info:
+        github: wes-lewis
+    - name: Scott Gigante
+      roles:
+      - author
+      - maintainer
+      info:
+        github: scottgigante
+        orcid: 0000-0002-4544-2764
+    - name: Robrecht Cannoodt
+      roles:
+      - author
+      info:
+        github: rcannood
+        orcid: 0000-0003-3641-729X
+    - name: Kai Waldrant
+      roles:
+      - contributor
+      info:
+        github: KaiWaldrant
+        orcid: 0009-0003-8555-1361
+    - name: Jeremie Kalfon
+      roles:
+      - contributor
+      info:
+        github: jkobject
+        orcid: 0000-0002-2818-9728
+    keywords:
+    - single-cell
+    - openproblems
+    - benchmark
+    - denoising
+    license: MIT
+    organization: openproblems-bio
+    links:
+      repository: https://github.com/openproblems-bio/task_denoising
+      docker_registry: ghcr.io
+      issue_tracker: https://github.com/openproblems-bio/task_denoising/issues
+  arguments: [
+    ]
+  allArguments:
+  - type: file
+    name: --input_test
+    label: Test data
+    summary: The subset of molecules used for the test dataset
+    info:
+      format:
+        type: h5ad
+        layers:
+        - type: integer
+          name: counts
+          description: Raw counts
+          required: true
+        uns:
+        - type: string
+          name: dataset_id
+          description: A unique identifier for the dataset
+          required: true
+        - name: dataset_name
+          type: string
+          description: Nicely formatted name.
+          required: true
+        - type: string
+          name: dataset_url
+          description: Link to the original source of the dataset.
+          required: false
+        - name: dataset_reference
+          type: string
+          description: Bibtex reference of the paper in which the dataset was published.
+          required: false
+        - name: dataset_summary
+          type: string
+          description: Short description of the dataset.
+          required: true
+        - name: dataset_description
+          type: string
+          description: Long description of the dataset.
+          required: true
+        - name: dataset_organism
+          type: string
+          description: The organism of the sample in the dataset.
+          required: false
+        - name: train_sum
+          type: integer
+          description: The total number of counts in the training dataset.
+          required: true
+    example: resources_test/task_denoising/cxg_immune_cell_atlas/test.h5ad
+    must_exist: true
+    create_parent: true
+    required: true
+    direction: input
+    multiple: false
+    multiple_sep: ;
+    plainName: input_test
+  - type: file
+    name: --input_prediction
+    label: Denoised data
+    summary: A denoised dataset as output by a method.
+    info:
+      format:
+        type: h5ad
+        layers:
+        - type: integer
+          name: denoised
+          description: denoised data
+          required: true
+        uns:
+        - type: string
+          name: dataset_id
+          description: A unique identifier for the dataset
+          required: true
+        - type: string
+          name: method_id
+          description: A unique identifier for the method
+          required: true
+    example: resources_test/task_denoising/cxg_immune_cell_atlas/denoised.h5ad
+    must_exist: true
+    create_parent: true
+    required: true
+    direction: input
+    multiple: false
+    multiple_sep: ;
+    plainName: input_prediction
+  - type: file
+    name: --output
+    label: Score
+    summary: File indicating the score of a metric.
+    info:
+      format:
+        type: h5ad
+        uns:
+        - type: string
+          name: dataset_id
+          description: A unique identifier for the dataset
+          required: true
+        - type: string
+          name: method_id
+          description: A unique identifier for the method
+          required: true
+        - type: string
+          name: metric_ids
+          description: One or more unique metric identifiers
+          multiple: true
+          required: true
+        - type: double
+          name: metric_values
+          description: The metric values obtained for the given prediction. Must be
+            of same length as 'metric_ids'.
+          multiple: true
+          required: true
+    example: resources_test/task_denoising/cxg_immune_cell_atlas/score.h5ad
+    must_exist: true
+    create_parent: true
+    required: true
+    direction: output
+    multiple: false
+    multiple_sep: ;
+    plainName: output
+    default: *id002
+  allArgumentGroups:
+  - name: Arguments
+    arguments:
+    - type: file
+      name: --input_test
+      label: Test data
+      summary: The subset of molecules used for the test dataset
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: counts
+            description: Raw counts
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - name: dataset_name
+            type: string
+            description: Nicely formatted name.
+            required: true
+          - type: string
+            name: dataset_url
+            description: Link to the original source of the dataset.
+            required: false
+          - name: dataset_reference
+            type: string
+            description: Bibtex reference of the paper in which the dataset was published.
+            required: false
+          - name: dataset_summary
+            type: string
+            description: Short description of the dataset.
+            required: true
+          - name: dataset_description
+            type: string
+            description: Long description of the dataset.
+            required: true
+          - name: dataset_organism
+            type: string
+            description: The organism of the sample in the dataset.
+            required: false
+          - name: train_sum
+            type: integer
+            description: The total number of counts in the training dataset.
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/test.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_test
+    - type: file
+      name: --input_prediction
+      label: Denoised data
+      summary: A denoised dataset as output by a method.
+      info:
+        format:
+          type: h5ad
+          layers:
+          - type: integer
+            name: denoised
+            description: denoised data
+            required: true
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/denoised.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: input
+      multiple: false
+      multiple_sep: ;
+      plainName: input_prediction
+    - type: file
+      name: --output
+      label: Score
+      summary: File indicating the score of a metric.
+      info:
+        format:
+          type: h5ad
+          uns:
+          - type: string
+            name: dataset_id
+            description: A unique identifier for the dataset
+            required: true
+          - type: string
+            name: method_id
+            description: A unique identifier for the method
+            required: true
+          - type: string
+            name: metric_ids
+            description: One or more unique metric identifiers
+            multiple: true
+            required: true
+          - type: double
+            name: metric_values
+            description: The metric values obtained for the given prediction. Must
+              be of same length as 'metric_ids'.
+            multiple: true
+            required: true
+      example: resources_test/task_denoising/cxg_immune_cell_atlas/score.h5ad
+      must_exist: true
+      create_parent: true
+      required: true
+      direction: output
+      multiple: false
+      multiple_sep: ;
+      plainName: output
+      default: *id002

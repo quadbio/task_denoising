@@ -1,0 +1,7 @@
+id: output
+output_scores: !file score_uns.yaml
+output_method_configs: !file method_configs.yaml
+output_metric_configs: !file metric_configs.yaml
+output_dataset_info: !file dataset_uns.yaml
+output_task_info: !file task_info.yaml
+
